@@ -36,6 +36,39 @@ die() {
     exit 1
 }
 
+# --- /proc helpers -------------------------------------------------------
+
+# Numeric list of every PID currently in the system, taken from the numeric
+# directory entries under /proc. We do NOT use `ps` here: /proc exposes a
+# directory named after each live PID, and globbing the numeric entries is the
+# discovery mechanism.
+#
+# The glob /proc/[0-9]*/ expands in bytewise (lexicographic) order, which is
+# NOT numeric ascending (in that order "100" < "9"). We pipe through `sort -n`
+# so PIDs come out ascending, matching the reference output.
+list_pids() {
+    local d pid
+    for d in /proc/[0-9]*/; do
+        pid="${d#/proc/}"   # -> "<PID>/"
+        pid="${pid%/}"      # -> "<PID>"
+        printf '%s\n' "$pid"
+    done | sort -n
+}
+
+# --- modes ---------------------------------------------------------------
+
+# --list-short: one PID per line, header "PID".
+cmd_list_short() {
+    echo "PID"
+    local pid
+    for pid in $(list_pids); do
+        # Re-check that the process still exists (it may have exited between
+        # discovery and now). If the directory is gone, skip it.
+        [ -d "/proc/$pid" ] || continue
+        echo "$pid"
+    done
+}
+
 # --- argument dispatch ---------------------------------------------------
 if [ "$#" -lt 1 ]; then
     usage >&2
@@ -45,6 +78,9 @@ fi
 case "$1" in
     --help)
         usage
+        ;;
+    --list-short)
+        cmd_list_short
         ;;
     *)
         die "unrecognized option: $1"
