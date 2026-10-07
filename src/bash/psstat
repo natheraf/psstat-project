@@ -55,6 +55,64 @@ list_pids() {
     done | sort -n
 }
 
+# stat_field <pid> <field_number>
+# Print the field_number (1-based, per /proc(5) where field 2 is the
+# parenthesised comm) from /proc/<pid>/stat.
+#
+# Why it is written this way: the comm field (field 2) is wrapped in
+# parentheses and MAY itself contain spaces and parentheses. A naive
+# whitespace split therefore mis-counts fields. The robust approach is to
+# anchor on the FIRST '(' and the LAST ')', then split everything after the
+# closing ") " into whitespace-separated fields. field N (N >= 3) is the
+# (N-3)th such field (0-based index N-3).
+stat_field() {
+    local raw after comm rest
+    local idx
+    raw="$(cat "/proc/$1/stat" 2>/dev/null)" || return 1
+    after="${raw#*(}"               # text after the first '('
+    comm="${after%%)*}"             # up to the first ')'
+    rest="${after:${#comm}+2}"      # skip comm, the ')', and the space
+    read -r -a rest <<< "$rest" 2>/dev/null || true
+    idx=$(( $2 - 3 ))
+    printf '%s' "${rest[$idx]-}"
+}
+
+# cmdline_fmt <pid>
+# Print the CMD_ARGS body (NOT the outer double quotes) built from
+# /proc/<pid>/cmdline. Arguments are NUL-separated; each is rendered
+# single-quoted and joined by a single space, matching the reference output.
+# Prints nothing for kernel threads (empty cmdline).
+cmdline_fmt() {
+    local args=() a out=""
+    while IFS= read -r -d '' a; do
+        args+=("$a")
+    done < "/proc/$1/cmdline" 2>/dev/null || true
+    [ "${#args[@]}" -eq 0 ] && return 0
+    for a in "${args[@]}"; do
+        out+="'$a' "
+    done
+    printf '%s' "${out% }"
+}
+
+# policy_name <policy_number>
+# Map a CPU scheduling policy number to "NAME(num)", using the SCHED_*
+# constants defined in /usr/include/linux/sched.h.
+policy_name() {
+    local n="$1" name
+    case "$n" in
+        0) name="SCHED_NORMAL" ;;
+        1) name="SCHED_FIFO" ;;
+        2) name="SCHED_RR" ;;
+        3) name="SCHED_BATCH" ;;
+        4) name="SCHED_ISO" ;;       # reserved, not implemented
+        5) name="SCHED_IDLE" ;;
+        6) name="SCHED_DEADLINE" ;;
+        7) name="SCHED_EXT" ;;
+        *) name="UNKNOWN" ;;
+    esac
+    printf '%s(%s)' "$name" "$n"
+}
+
 # --- modes ---------------------------------------------------------------
 
 # --list-short: one PID per line, header "PID".
@@ -62,10 +120,30 @@ cmd_list_short() {
     echo "PID"
     local pid
     for pid in $(list_pids); do
-        # Re-check that the process still exists (it may have exited between
-        # discovery and now). If the directory is gone, skip it.
+        # Re-check existence: the process may have exited after discovery.
         [ -d "/proc/$pid" ] || continue
         echo "$pid"
+    done
+}
+
+# --list-long: header "PID CMD ST CMD_ARGS".
+#   CMD      image name from /proc/<pid>/comm (double-quoted)
+#   ST       state letter, field 3 of /proc/<pid>/stat
+#   CMD_ARGS /proc/<pid>/cmdline rendered as single-quoted args (omitted for
+#            kernel threads, which have an empty cmdline)
+cmd_list_long() {
+    echo "PID CMD ST CMD_ARGS"
+    local pid comm st cmdline
+    for pid in $(list_pids); do
+        [ -d "/proc/$pid" ] || continue
+        comm="$(cat "/proc/$pid/comm" 2>/dev/null)" || continue
+        st="$(stat_field "$pid" 3)" || continue
+        cmdline="$(cmdline_fmt "$pid")"
+        if [ -n "$cmdline" ]; then
+            printf '%s "%s" %s "%s"\n' "$pid" "$comm" "$st" "$cmdline"
+        else
+            printf '%s "%s" %s\n' "$pid" "$comm" "$st"
+        fi
     done
 }
 
@@ -81,6 +159,9 @@ case "$1" in
         ;;
     --list-short)
         cmd_list_short
+        ;;
+    --list-long)
+        cmd_list_long
         ;;
     *)
         die "unrecognized option: $1"
