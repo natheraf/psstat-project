@@ -154,6 +154,47 @@ cmd_list_long() {
     done
 }
 
+# --list-pid-is <pid>: print a fixed-width status block for one process.
+# The value column is right-justified to width 10 immediately after the
+# colon (matching the reference output); optional units are appended to
+# utime/stime (" clock ticks"), vsize (" bytes") and rss (" pages").
+cmd_list_pid_is() {
+    local pid="$1"
+    local comm state minflt majflt utime stime num_threads vsize rss
+
+    # If the process is gone (exited, or we lack access to its /proc entry),
+    # the first cat fails. Surface it the way a read would: "No such file
+    # or directory" (see ANSWERS.md, question 9).
+    if [ ! -d "/proc/$pid" ]; then
+        echo "psstat: process $pid: No such file or directory" >&2
+        return 1
+    fi
+    comm="$(cat "/proc/$pid/comm" 2>/dev/null)"
+    state="$(stat_field "$pid" 3)"
+    minflt="$(stat_field "$pid" 10)"
+    majflt="$(stat_field "$pid" 12)"
+    utime="$(stat_field "$pid" 14)"
+    stime="$(stat_field "$pid" 15)"
+    num_threads="$(stat_field "$pid" 20)"
+    vsize="$(stat_field "$pid" 23)"
+    rss="$(stat_field "$pid" 24)"
+    if [ -z "$comm" ] || [ -z "$state" ]; then
+        echo "psstat: process $pid: No such file or directory" >&2
+        return 1
+    fi
+
+    printf '%15s: %10s%s\n' "pid"         "$pid" ""
+    printf '%15s: %10s%s\n' "comm"        "($comm)" ""
+    printf '%15s: %10s%s\n' "state"       "$state" ""
+    printf '%15s: %10s%s\n' "minflt"      "$minflt" ""
+    printf '%15s: %10s%s\n' "majflt"      "$majflt" ""
+    printf '%15s: %10s%s\n' "utime"       "$utime" " clock ticks"
+    printf '%15s: %10s%s\n' "stime"       "$stime" " clock ticks"
+    printf '%15s: %10s%s\n' "num_threads" "$num_threads" ""
+    printf '%15s: %10s%s\n' "vsize"       "$vsize" " bytes"
+    printf '%15s: %10s%s\n' "rss"         "$rss" " pages"
+}
+
 # --list-name-has <name_part>: like --list-long but only for processes whose
 # image name (comm) contains <name_part> as a substring. Substring matching is
 # done with a bash glob: [[ $comm == *"$name_part"* ]] (equivalent to a regex
@@ -191,6 +232,13 @@ case "$1" in
             die "--list-name-has requires a <name_part> argument"
         fi
         cmd_list_name_has "$2"
+        ;;
+    --list-pid-is)
+        if [ "${2:-}" = "" ]; then
+            die "--list-pid-is requires a <pid> argument"
+        fi
+        cmd_list_pid_is "$2"
+        exit $?
         ;;
     *)
         die "unrecognized option: $1"
