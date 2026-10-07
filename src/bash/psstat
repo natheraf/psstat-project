@@ -126,23 +126,46 @@ cmd_list_short() {
     done
 }
 
-# --list-long: header "PID CMD ST CMD_ARGS".
-#   CMD      image name from /proc/<pid>/comm (double-quoted)
-#   ST       state letter, field 3 of /proc/<pid>/stat
-#   CMD_ARGS /proc/<pid>/cmdline rendered as single-quoted args (omitted for
-#            kernel threads, which have an empty cmdline)
+# emit_long_line <pid>
+# Print one long-format line "PID CMD ST CMD_ARGS" for a single process, or
+# nothing if the process has vanished or is unreadable. CMD is the image name
+# from /proc/<pid>/comm (double-quoted), ST is state (field 3 of stat), and
+# CMD_ARGS is the cmdline rendered as single-quoted args (omitted for kernel
+# threads that have an empty cmdline).
+emit_long_line() {
+    local pid="$1" comm st cmdline
+    [ -d "/proc/$pid" ] || return 0
+    comm="$(cat "/proc/$pid/comm" 2>/dev/null)" || return 0
+    st="$(stat_field "$pid" 3)" || return 0
+    cmdline="$(cmdline_fmt "$pid")"
+    if [ -n "$cmdline" ]; then
+        printf '%s "%s" %s "%s"\n' "$pid" "$comm" "$st" "$cmdline"
+    else
+        printf '%s "%s" %s\n' "$pid" "$comm" "$st"
+    fi
+}
+
+# --list-long: header "PID CMD ST CMD_ARGS", one line per process.
 cmd_list_long() {
     echo "PID CMD ST CMD_ARGS"
-    local pid comm st cmdline
+    local pid
+    for pid in $(list_pids); do
+        emit_long_line "$pid"
+    done
+}
+
+# --list-name-has <name_part>: like --list-long but only for processes whose
+# image name (comm) contains <name_part> as a substring. Substring matching is
+# done with a bash glob: [[ $comm == *"$name_part"* ]] (equivalent to a regex
+# of .*"name".*).
+cmd_list_name_has() {
+    local name_part="$1" pid comm
+    echo "PID CMD ST CMD_ARGS"
     for pid in $(list_pids); do
         [ -d "/proc/$pid" ] || continue
         comm="$(cat "/proc/$pid/comm" 2>/dev/null)" || continue
-        st="$(stat_field "$pid" 3)" || continue
-        cmdline="$(cmdline_fmt "$pid")"
-        if [ -n "$cmdline" ]; then
-            printf '%s "%s" %s "%s"\n' "$pid" "$comm" "$st" "$cmdline"
-        else
-            printf '%s "%s" %s\n' "$pid" "$comm" "$st"
+        if [[ "$comm" == *"$name_part"* ]]; then
+            emit_long_line "$pid"
         fi
     done
 }
@@ -162,6 +185,12 @@ case "$1" in
         ;;
     --list-long)
         cmd_list_long
+        ;;
+    --list-name-has)
+        if [ "${2:-}" = "" ]; then
+            die "--list-name-has requires a <name_part> argument"
+        fi
+        cmd_list_name_has "$2"
         ;;
     *)
         die "unrecognized option: $1"
