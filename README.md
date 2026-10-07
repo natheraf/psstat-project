@@ -26,6 +26,7 @@ that process is skipped (see *ANSWERS.md*, Design note).
 ├── README.md                      this file
 ├── .gitignore
 ├── ANSWERS.md                     answers to the assignment Questions
+├── traces/                        strace evidence referenced by ANSWERS.md
 └── src/
     └── bash/
         └── psstat                 the deliverable shell script

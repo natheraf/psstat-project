@@ -1,0 +1,16 @@
+# strace of: ./psstat --list-short   (trace limited to /proc-related syscalls)
+# Full run produced 347 syscalls. /proc usage below:
+#   - 0 read(2) calls on any /proc/<pid>/* file  (this is the answer to Q2)
+#   - bash implements the /proc/[0-9]*/ glob with newfstatat() probes on each
+#     candidate path; the [ -d /proc/<pid> ] existence test also uses newfstatat.
+#     A short-lived PID
+#     (990) already gone returns ENOENT and is skipped.
+
+newfstatat(AT_FDCWD, "/proc/1", {st_mode=S_IFDIR|0555, st_size=0, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/proc/7", {st_mode=S_IFDIR|0555, st_size=0, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/proc/985", {st_mode=S_IFDIR|0555, st_size=0, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/proc/986", {st_mode=S_IFDIR|0555, st_size=0, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/proc/989", {st_mode=S_IFDIR|0555, st_size=0, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/proc/990", 0x7ffcba7d9600, 0) = -1 ENOENT (No such file or directory)
+newfstatat(AT_FDCWD, "/proc/991", 0x7ffcba7d9600, 0) = -1 ENOENT (No such file or directory)
+newfstatat(AT_FDCWD, "/proc/992", 0x7ffcba7d9600, 0) = -1 ENOENT (No such file or directory)

@@ -1,0 +1,8 @@
+newfstatat(AT_FDCWD, "/proc/1", {st_mode=S_IFDIR|0555, st_size=0, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/proc/7", {st_mode=S_IFDIR|0555, st_size=0, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/proc/985", {st_mode=S_IFDIR|0555, st_size=0, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/proc/986", {st_mode=S_IFDIR|0555, st_size=0, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/proc/989", {st_mode=S_IFDIR|0555, st_size=0, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/proc/990", 0x7ffcba7d9600, 0) = -1 ENOENT (No such file or directory)
+newfstatat(AT_FDCWD, "/proc/991", 0x7ffcba7d9600, 0) = -1 ENOENT (No such file or directory)
+newfstatat(AT_FDCWD, "/proc/992", 0x7ffcba7d9600, 0) = -1 ENOENT (No such file or directory)
