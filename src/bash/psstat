@@ -154,6 +154,28 @@ cmd_list_long() {
     done
 }
 
+# --list-sched-policy-is <policy_number>: header "PID CMD ST SCHED_POLICY
+# CMD_ARGS", one line per process whose CPU scheduling policy (field 41 of
+# /proc/<pid>/stat) equals the requested number. The policy is rendered as
+# NAME(num) using the SCHED_* constants from /usr/include/linux/sched.h.
+cmd_list_sched_policy_is() {
+    local target="$1" pid comm st policy cmdline
+    echo "PID CMD ST SCHED_POLICY CMD_ARGS"
+    for pid in $(list_pids); do
+        [ -d "/proc/$pid" ] || continue
+        policy="$(stat_field "$pid" 41)" || continue
+        [ "$policy" = "$target" ] || continue
+        comm="$(cat "/proc/$pid/comm" 2>/dev/null)" || continue
+        st="$(stat_field "$pid" 3)" || continue
+        cmdline="$(cmdline_fmt "$pid")"
+        if [ -n "$cmdline" ]; then
+            printf '%s "%s" %s %s "%s"\n' "$pid" "$comm" "$st" "$(policy_name "$policy")" "$cmdline"
+        else
+            printf '%s "%s" %s %s\n' "$pid" "$comm" "$st" "$(policy_name "$policy")"
+        fi
+    done
+}
+
 # --list-pid-is <pid>: print a fixed-width status block for one process.
 # The value column is right-justified to width 10 immediately after the
 # colon (matching the reference output); optional units are appended to
@@ -239,6 +261,12 @@ case "$1" in
         fi
         cmd_list_pid_is "$2"
         exit $?
+        ;;
+    --list-sched-policy-is)
+        if [ "${2:-}" = "" ]; then
+            die "--list-sched-policy-is requires a <policy_number> argument"
+        fi
+        cmd_list_sched_policy_is "$2"
         ;;
     *)
         die "unrecognized option: $1"
