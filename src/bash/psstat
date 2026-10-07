@@ -1,59 +1,54 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# psstat - query process information from the /proc file system.
+#
+# This script is the deliverable for CISC 7310X Project 1. It reads
+# process metadata exclusively from /proc. The `ps` command (and other
+# wrappers around it) are intentionally NOT used to gather process
+# information.
+#
+# Modes:
+#   --help
+#   --list-short
+#   --list-long
+#   --list-name-has <name_part>
+#   --list-pid-is <pid>
+#   --list-sched-policy-is <policy_number>
+#
+set -u
 
-source psstatcommon.sh
-source psstathelp.sh
-source psstatlsshort.sh
-source psstatlslong.sh
-source psstatlsnamehas.sh
-source psstatlspidis.sh
-source psstatlsstatis.sh
-source psstatlspolicyis.sh
+usage() {
+    cat <<'EOF'
+Usage: psstat [OPTION] ...
+List process information.
+Options are
+ --list-short                  list all processes in short format
+ --list-long                   list all processes in long format
+ --list-name-has <name_part>   list all processes whose name has name_part in long format
+ --list-pid-is <pid>           list status of the process whose pid is <pid>
+ --list-sched-policy-is <policy_number> list all processes whose CPU scheduling policy number is <policy_number> in long format
+EOF
+}
 
+die() {
+    echo "psstat: $*" >&2
+    echo "Try 'psstat --help' for more information." >&2
+    exit 1
+}
+
+# --- argument dispatch ---------------------------------------------------
+if [ "$#" -lt 1 ]; then
+    usage >&2
+    exit 1
+fi
 
 case "$1" in
-
-	"--list-short")
-	list_short
-	;;
-
-	"--list-long")
-	list_long
-	;;
-
-	"--list-name-has")
-	if [ $# -ne 2 ]; then
-		help_and_exit
-	fi
-	shift
-	list_name_has $1
-	;;	
-
-	"--list-pid-is")
-	if [ $# -ne 2 ]; then
-		help_and_exit
-	fi
-	shift
-	list_pid_is $1
-	;;
-
-	"--list-state-is")
-	if [ $# -ne 2 ]; then
-		help_and_exit
-	fi
-	shift
-	list_state_is $1
-	;;
-
-	"--list-sched-policy-is")
-	if [ $# -ne 2 ]; then
-		help_and_exit
-	fi
-	shift
-	list_sched_policy_is $1
-	;;
-
-	*)
-	help_and_exit
-	;;
+    --help)
+        usage
+        ;;
+    *)
+        die "unrecognized option: $1"
+        ;;
 esac
 
+exit 0

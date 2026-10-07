@@ -1,0 +1,21 @@
+# Build artifacts / scratch files
+*~
+*.swp
+*.o
+*.so
+*.out
+
+# Editors / IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+
+# Python (used only for verification, not part of the deliverable)
+__pycache__/
+*.pyc
+
+# Local scratch / traces kept outside the deliverable
+strace-*.log
+/tmp/
