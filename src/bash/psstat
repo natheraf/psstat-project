@@ -1,0 +1,59 @@
+#!/bin/bash
+
+source psstatcommon.sh
+source psstathelp.sh
+source psstatlsshort.sh
+source psstatlslong.sh
+source psstatlsnamehas.sh
+source psstatlspidis.sh
+source psstatlsstatis.sh
+source psstatlspolicyis.sh
+
+
+case "$1" in
+
+	"--list-short")
+	list_short
+	;;
+
+	"--list-long")
+	list_long
+	;;
+
+	"--list-name-has")
+	if [ $# -ne 2 ]; then
+		help_and_exit
+	fi
+	shift
+	list_name_has $1
+	;;	
+
+	"--list-pid-is")
+	if [ $# -ne 2 ]; then
+		help_and_exit
+	fi
+	shift
+	list_pid_is $1
+	;;
+
+	"--list-state-is")
+	if [ $# -ne 2 ]; then
+		help_and_exit
+	fi
+	shift
+	list_state_is $1
+	;;
+
+	"--list-sched-policy-is")
+	if [ $# -ne 2 ]; then
+		help_and_exit
+	fi
+	shift
+	list_sched_policy_is $1
+	;;
+
+	*)
+	help_and_exit
+	;;
+esac
+
